@@ -9,6 +9,7 @@
 import {
   classifySource,
   compareVersions,
+  describeFailure,
   isPrerelease,
   readGitDependencies,
   readPinnedCommits,
@@ -59,6 +60,52 @@ check(
     '5619392300540e9e2dc59c5ed3ed87091d09225d',
 )
 check('empty source is unknown', classifySource('').channel === 'unknown')
+
+console.log('describeFailure')
+// updateBundle resolves on a refusal, and its result.error is always an object.
+// These cases cover every shape the panel has to turn into a sentence.
+check(
+  'a diagnostic is reported verbatim',
+  describeFailure({
+    error: { code: 'invalid-spec', diagnostic: '2.4.2 is not a version newer than the installed 2.4.2' },
+  }) === '2.4.2 is not a version newer than the installed 2.4.2',
+)
+check(
+  'a bare code still yields a readable reason',
+  describeFailure({ error: { code: 'not-bundle' } }) === 'the new version does not declare a DSH bundle',
+)
+check(
+  'an unknown bare code is not invented',
+  describeFailure({ error: { code: 'something-new' } }) === '',
+)
+check(
+  'incompatibility is rendered with the requirements and runtime',
+  describeFailure({
+    error: {
+      code: 'incompatible-version',
+      incompatible: [
+        { name: 'dsh-context', version: '0.87.0', runtimeVersion: '0.2.1', requirements: { 'engines.dsh': '>=0.2.2' } },
+      ],
+    },
+  }) === 'dsh-context@0.87.0 needs engines.dsh >=0.2.2 (running 0.2.1)',
+)
+check(
+  'a failed install falls back to the manager output tail',
+  describeFailure({
+    error: { code: 'operation-error' },
+    packageResult: { exitCode: 1, output: 'line one\nline two\nline three\nline four', truncated: false, logPath: 'x' },
+  }) === 'line two line three line four',
+)
+check(
+  'an unreachable git host is named as such',
+  describeFailure({ error: { code: 'operation-error' }, failedAt: 'spec-host' }) ===
+    'the Git host could not be reached',
+)
+check(
+  'multiline diagnostics are cut down to their tail',
+  describeFailure({ error: { code: 'operation-error', diagnostic: 'a\nb\nc\nd' } }) === 'b c d',
+)
+check('an empty result describes nothing', describeFailure({}) === '')
 
 console.log('resolveProfileDir')
 const real = resolveProfileDir(process.env)

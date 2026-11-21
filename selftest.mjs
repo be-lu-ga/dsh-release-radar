@@ -282,6 +282,18 @@ console.log('failure surfacing')
   ok(text(open).includes('registry unreachable'), 'panel shows the host error text')
 }
 
+console.log('update failure banner')
+{
+  // The banner is the only place an update refusal surfaces, so it has to name
+  // the plugin and the reason: the same bare "update failed" for every cause is
+  // what made the real failure impossible to identify.
+  const tree = render([report, true, '', '', '更新失败：dsh-drawai — update failed', false, 'zh-CN'])
+  const banner = byClass(tree, 'dsh-un-banner')[0]
+  ok(banner?.props?.['data-tone'] === 'err', 'a failed update uses the error tone')
+  ok(text(tree).includes('dsh-drawai'), 'the banner names the plugin that failed')
+  ok(text(tree).includes('update failed'), 'the banner carries the host reason')
+}
+
 console.log('notice after update')
 {
   const tree = render([{ ...report, updates: [] }, true, '', 'dshmarket 已更新到 1.74.0。更新完成，可能需要重启 DSH 才会生效。', '', false, 'zh-CN'])
