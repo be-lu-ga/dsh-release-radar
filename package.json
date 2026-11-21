@@ -1,0 +1,56 @@
+{
+  "name": "dsh-release-radar",
+  "version": "0.1.0",
+  "description": "Watches the plugins installed in your DSH profile and floats a badge when a newer release exists — registry versions compared by semver, GitHub installs compared by pinned commit. Nothing installs without your click.",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "locale",
+    "docs",
+    "icon.svg",
+    "README.md",
+    "README.zh.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node selftest.mjs && node host-test.mjs"
+  },
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "dsh-plugin",
+    "plugin-updates",
+    "release-notifier",
+    "version-check"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/be-lu-ga/dsh-release-radar.git"
+  },
+  "homepage": "https://github.com/be-lu-ga/dsh-release-radar#readme",
+  "bugs": {
+    "url": "https://github.com/be-lu-ga/dsh-release-radar/issues"
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": []
+    }
+  }
+}

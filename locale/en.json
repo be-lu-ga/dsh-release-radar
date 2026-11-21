@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "Update notifier",
+    "description": "Sweeps the third-party plugins installed in this profile every 24 hours and floats a corner badge when newer releases exist. Open it to see how far each plugin lags and update one at a time; Git installs are marked for manual update. Nothing is installed until you confirm.",
+    "detail": "docs/DETAIL.md"
+  }
+}

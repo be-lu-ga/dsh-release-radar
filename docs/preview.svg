@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="300" viewBox="0 0 640 300">
+  <rect width="640" height="300" rx="20" fill="#f3f5f9"/>
+
+  <!-- app frame: sidebar + conversation column -->
+  <rect x="40" y="36" width="560" height="228" rx="16" fill="#ffffff" stroke="#dbe2ea" stroke-width="2"/>
+  <rect x="56" y="52" width="88" height="196" rx="8" fill="#eef2f7"/>
+  <rect x="68" y="70" width="56" height="8" rx="4" fill="#d6dde7"/>
+  <rect x="68" y="90" width="44" height="8" rx="4" fill="#e0e5ed"/>
+  <rect x="68" y="110" width="52" height="8" rx="4" fill="#e0e5ed"/>
+  <rect x="68" y="130" width="38" height="8" rx="4" fill="#e0e5ed"/>
+  <rect x="160" y="64" width="196" height="10" rx="5" fill="#d6dde7"/>
+  <rect x="160" y="86" width="152" height="8" rx="4" fill="#e0e5ed"/>
+  <rect x="160" y="104" width="176" height="8" rx="4" fill="#e0e5ed"/>
+  <rect x="160" y="200" width="424" height="32" rx="10" fill="#f7f9fc" stroke="#dbe2ea" stroke-width="2"/>
+
+  <!-- open panel, anchored bottom-right exactly like the real component -->
+  <rect x="264" y="96" width="316" height="140" rx="14" fill="#ffffff" stroke="#c8d3df" stroke-width="2"/>
+  <rect x="280" y="112" width="66" height="10" rx="5" fill="#5a6673"/>
+  <rect x="352" y="114" width="84" height="7" rx="3.5" fill="#c2cbd6"/>
+  <path d="M552 112l9 9m0-9l-9 9" fill="none" stroke="#b6c0cc" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- row 1: name · 1.73.22 → 1.74.0 · [更新] -->
+  <rect x="276" y="134" width="292" height="28" rx="9" fill="#ffffff"/>
+  <rect x="286" y="144" width="96" height="8" rx="4" fill="#93a0ae"/>
+  <rect x="394" y="144" width="34" height="8" rx="4" fill="#c2cbd6"/>
+  <path d="M434 148h9m-4-4 4 4-4 4" fill="none" stroke="#c2cbd6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="450" y="144" width="30" height="8" rx="4" fill="#2f9e44"/>
+  <rect x="500" y="139" width="60" height="18" rx="6" fill="none" stroke="#c8d3df" stroke-width="1.5"/>
+  <rect x="514" y="146" width="32" height="5" rx="2.5" fill="#8b98a6"/>
+
+  <!-- row 2: same shape, second plugin -->
+  <rect x="276" y="166" width="292" height="28" rx="9" fill="#ffffff"/>
+  <rect x="286" y="176" width="80" height="8" rx="4" fill="#93a0ae"/>
+  <rect x="394" y="176" width="34" height="8" rx="4" fill="#c2cbd6"/>
+  <path d="M434 180h9m-4-4 4 4-4 4" fill="none" stroke="#c2cbd6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="450" y="176" width="30" height="8" rx="4" fill="#2f9e44"/>
+  <rect x="500" y="171" width="60" height="18" rx="6" fill="none" stroke="#c8d3df" stroke-width="1.5"/>
+  <rect x="514" y="178" width="32" height="5" rx="2.5" fill="#8b98a6"/>
+
+  <!-- row 3: git row — no button, an explanation instead -->
+  <rect x="276" y="198" width="292" height="16" rx="8" fill="#ffffff"/>
+  <rect x="286" y="202" width="72" height="8" rx="4" fill="#93a0ae"/>
+  <rect x="404" y="202" width="96" height="8" rx="4" fill="#c2cbd6"/>
+
+  <!-- footer: the single primary action -->
+  <rect x="276" y="216" width="1" height="0" fill="none"/>
+  <rect x="264" y="206" width="316" height="1" fill="#edf1f5"/>
+  <rect x="280" y="212" width="70" height="18" rx="6" fill="#1a1a1a"/>
+  <rect x="294" y="218" width="42" height="6" rx="3" fill="#ffffff" opacity="0.9"/>
+
+  <!-- compact badge, bottom-right: dot plus count -->
+  <rect x="524" y="242" width="60" height="26" rx="13" fill="#ffffff" stroke="#c8d3df" stroke-width="1.5"/>
+  <circle cx="540" cy="255" r="4" fill="#e5484d"/>
+  <rect x="551" y="251" width="20" height="8" rx="4" fill="#5a6673"/>
+</svg>
