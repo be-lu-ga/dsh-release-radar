@@ -1,7 +1,7 @@
 {
   "name": "dsh-release-radar",
-  "version": "0.1.1",
-  "description": "Watches the plugins installed in your DSH profile and floats a badge when a newer release exists — registry versions compared by semver, GitHub installs compared by pinned commit. Nothing installs without your click.",
+  "version": "0.2.0",
+  "description": "Watches the plugins installed in your DSH profile and floats a badge when a newer release exists — registry versions compared by semver, GitHub installs compared by pinned commit. Update one row, or update everything in one click; the badge stays put and turns green when you are current.",
   "type": "module",
   "main": "lib/index.js",
   "exports": {

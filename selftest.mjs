@@ -27,16 +27,31 @@ const ok = (condition, label) => {
 function makeReact() {
   let cursor = 0
   let overrides = []
+  let effects = []
+  let calls = []
+  // Refs survive a re-render in real React, and the batch retirer depends on
+  // that (it remembers which run it already reported). Keying them by hook
+  // position across renders reproduces that behaviour instead of resetting it.
+  const refs = new Map()
   const React = {
     createElement: (type, props, ...children) => ({ type, props: props ?? {}, children: children.flat(Infinity).filter((c) => c !== null && c !== undefined && c !== false) }),
-    useRef: (initial) => ({ current: initial }),
+    useRef: (initial) => {
+      const index = cursor
+      cursor += 1
+      if (!refs.has(index)) refs.set(index, { current: initial })
+      return refs.get(index)
+    },
     useState: (initial) => {
       const index = cursor
       cursor += 1
       const value = index < overrides.length && overrides[index] !== undefined ? overrides[index] : (typeof initial === 'function' ? initial() : initial)
-      return [value, () => {}]
+      return [value, (next) => { calls.push({ index, value: next }) }]
     },
-    useEffect: () => {},
+    // Only dependency-carrying effects run: the mount-time ones open a poll
+    // loop and touch `fetch`, which this harness deliberately does not provide.
+    useEffect: (fn, deps) => {
+      if (Array.isArray(deps) && deps.length > 0) effects.push(fn)
+    },
     useCallback: (fn) => fn,
     useMemo: (fn) => fn(),
     useSyncExternalStore: (subscribe, getSnapshot) => getSnapshot(),
@@ -48,6 +63,21 @@ function makeReact() {
     },
     reset() {
       cursor = 0
+      effects = []
+      calls = []
+    },
+    resetRefs() {
+      refs.clear()
+    },
+    // State updates requested by effects, in call order, so a verdict decided
+    // inside an effect can be asserted the same way a rendered string is.
+    // Draining `calls` makes a second read mean "what changed since then",
+    // which is how a re-poll is proven silent.
+    flush() {
+      for (const fn of effects) fn()
+      const drained = calls
+      calls = []
+      return drained
     },
   }
 }
@@ -233,6 +263,30 @@ console.log('updates available, collapsed')
   ok(String(badge.props['aria-label'] ?? '').includes('2 个插件可更新'), 'badge accessible name carries the count')
 }
 
+console.log('up to date, collapsed')
+{
+  // A badge that disappears when there is nothing to install is
+  // indistinguishable from one that crashed: the user cannot tell "already
+  // current" from "the plugin stopped working". So a known-but-empty report
+  // keeps a standing ok badge.
+  const tree = render([{ ...report, updates: [] }, false, '', '', '', false, 'zh-CN'])
+  const badge = byClass(tree, 'dsh-un-badge')[0]
+  ok(badge !== undefined, 'keeps a badge on screen when nothing is actionable')
+  ok(badge?.props?.['data-tone'] === 'ok', 'the standing badge uses the ok tone')
+  ok(text(byClass(tree, 'dsh-un-count')[0]) === '✓', 'the standing badge shows a check mark, never a 0')
+  ok(badge?.props?.title === '已是最新', 'the standing badge is labelled in Chinese')
+  ok(text(byClass(tree, 'dsh-un-sr')[0]) === '', 'the live region stays quiet when there is no count to announce')
+
+  const english = render([{ ...report, updates: [] }, false, '', '', '', false, 'en-US'])
+  ok(byClass(english, 'dsh-un-badge')[0]?.props?.title === 'Up to date', 'the standing badge copy has an English form')
+
+  // Clicking it must open the panel: a standing status is still inspectable,
+  // unlike a check in flight, which has nothing to show yet.
+  ok(typeof badge?.props?.onClick === 'function', 'the standing badge stays clickable')
+  const checking = render([{ ...report, updates: [], phase: 'checking' }, false, '', '', '', false, 'zh-CN'])
+  ok(byClass(checking, 'dsh-un-badge')[0]?.props?.['data-tone'] === 'pending', 'a check in flight outranks the up-to-date state')
+}
+
 console.log('panel open')
 {
   const tree = render([report, true, '', '', '', false, 'zh-CN'])
@@ -322,6 +376,142 @@ console.log('busy state')
   ok(row !== undefined && text(row).includes('更新中'), 'the row being updated says so')
   const panel = byClass(tree, 'dsh-un-panel')[0]
   ok(panel?.props?.['aria-busy'] === true, 'panel marks itself busy')
+}
+
+console.log('update-all affordance')
+{
+  const tree = render([report, true, '', '', '', false, 'zh-CN'])
+  const primary = byClass(tree, 'dsh-un-primary')[0]
+  // The batch button carries the count so the click's blast radius is visible
+  // before it happens — the panel can hold rows the user never scrolled to.
+  ok(primary !== undefined, 'renders an update-all button')
+  ok(text(primary) === '全部更新（2）', 'update-all names the actionable count')
+  ok(primary?.props?.disabled === undefined || primary.props.disabled === false, 'update-all is enabled when idle')
+  // Re-check is no longer the primary action; it stays reachable beside it.
+  const ghost = byClass(tree, 'dsh-un-ghost')[0]
+  ok(ghost !== undefined, 're-check demotes to the secondary button')
+  ok(text(ghost) === '重新检查', 'secondary button still offers a re-check')
+
+  const english = render([report, true, '', '', '', false, 'en-US'])
+  ok(text(byClass(english, 'dsh-un-primary')[0]) === 'Update all (2)', 'update-all copy has an English form')
+
+  const empty = render([{ ...report, updates: [] }, true, '', '', '', false, 'zh-CN'])
+  ok(byClass(empty, 'dsh-un-primary').length === 0, 'no update-all button when nothing is actionable')
+}
+
+console.log('update-all progress')
+{
+  // The host answers only once the whole batch is done, so the progress line
+  // must come from `state.bulk`; without it the panel looks frozen mid-run.
+  const running = {
+    ...report,
+    bulk: { total: 2, done: 1, ok: 1, failed: 0, running: true, current: 'dsh-context' },
+  }
+  const tree = render([running, true, '@all', '', '', false, 'zh-CN'])
+  const hint = byClass(tree, 'dsh-un-hint')[0]
+  ok(text(hint) === '正在更新 dsh-context（1/2）', 'progress names the plugin in flight and its position')
+  const primary = byClass(tree, 'dsh-un-primary')[0]
+  ok(primary?.props?.disabled === true, 'update-all disables itself while a batch runs')
+  ok(text(primary) === '更新中…', 'update-all shows a working label during the batch')
+  const ghost = byClass(tree, 'dsh-un-ghost')[0]
+  ok(ghost?.props?.disabled === true, 're-check is blocked during the batch')
+  const row = byClass(tree, 'dsh-un-row').find((r) => text(r).includes('dshmarket'))
+  ok(row !== undefined && row.props?.['aria-busy'] !== 'true', 'rows other than the one in flight are not marked busy')
+  // During a batch the local busy flag is the sentinel, so the row that says
+  // "updating" has to be resolved against the host's progress record.
+  const current = byClass(tree, 'dsh-un-row').find((r) => text(r).includes('dsh-context'))
+  ok(current?.props?.['aria-busy'] === 'true', 'the row in flight is marked busy during a batch')
+  ok(current !== undefined && text(current).includes('更新中'), 'the row in flight says it is updating')
+
+  const starting = render([{ ...report, bulk: undefined }, true, '@all', '', '', false, 'zh-CN'])
+  ok(text(byClass(starting, 'dsh-un-hint')[0]) === '正在逐个更新…', 'falls back to a start label before the host reports progress')
+}
+
+console.log('update-all result')
+{
+  // The batch finishes in a later poll than the click, so the verdict has to be
+  // derived from the host's `bulk.results` by an effect. Driving the effect is
+  // the only way to prove the panel ends up out of its busy state.
+  const finished = {
+    ...report,
+    updates: [],
+    bulk: {
+      total: 2,
+      done: 2,
+      ok: 1,
+      failed: 1,
+      running: false,
+      startedAt: '2026-11-22T10:00:00.000Z',
+      finishedAt: '2026-11-22T10:02:00.000Z',
+      results: [
+        { ok: true, name: 'dshmarket' },
+        { ok: false, name: 'dsh-context', error: 'incompatible with this DSH', code: 'INCOMPATIBLE' },
+      ],
+    },
+  }
+  render([finished, true, '@all', '', '', false, 'zh-CN'])
+  const calls = state.flush()
+  const banner = calls.find((call) => call.index === 4)
+  ok(banner !== undefined, 'a partial failure raises the error banner')
+  ok(String(banner?.value ?? '').startsWith('1/2 个更新失败：'), 'the banner counts the batch')
+  ok(String(banner?.value ?? '').includes('dsh-context'), 'the banner names the failing plugin')
+  ok(String(banner?.value ?? '').includes('[INCOMPATIBLE]'), 'the banner keeps the error code')
+  ok(calls.some((call) => call.index === 2 && call.value === ''), 'the panel leaves its busy state when the batch ends')
+
+  // The same report polled twice must not re-announce; the run is keyed by
+  // finishedAt, so a second read of an unchanged report is silent.
+  const again = state.flush()
+  ok(again.length === 0, 'an already-reported batch does not announce twice')
+
+  const clean = {
+    ...report,
+    updates: [],
+    bulk: {
+      total: 2,
+      done: 2,
+      ok: 2,
+      failed: 0,
+      running: false,
+      finishedAt: '2026-11-22T11:00:00.000Z',
+      results: [{ ok: true, name: 'dshmarket' }, { ok: true, name: 'dsh-context' }],
+    },
+  }
+  render([clean, true, '@all', '', '', false, 'zh-CN'])
+  const success = state.flush().find((call) => call.index === 3)
+  ok(String(success?.value ?? '').includes('2 个插件已全部更新完成'), 'a clean batch reports success and its count')
+
+  const english = {
+    ...report,
+    updates: [],
+    bulk: {
+      total: 1, done: 1, ok: 0, failed: 1, running: false,
+      finishedAt: '2026-11-22T12:00:00.000Z',
+      results: [{ ok: false, name: 'dshmarket', error: 'nope' }],
+    },
+  }
+  render([english, true, '@all', '', '', false, 'en-US'])
+  const enBanner = state.flush().find((call) => call.index === 4)
+  ok(String(enBanner?.value ?? '').startsWith('1 of 1 updates failed'), 'the batch failure copy has an English form')
+
+  // Before the host answers, the previous report has no `bulk` at all. That is
+  // "not started yet", not "lost", so it must stay quiet and keep the button
+  // disabled — releasing here would let a second batch race the first.
+  render([{ ...report, bulk: undefined }, true, '@all', '', '', false, 'zh-CN'])
+  const early = state.flush()
+  ok(early.length === 0, 'a report from before the batch started is not read as a finished run')
+
+  // A host that predates the batch endpoint answers the POST with the plain
+  // report instead of `started:true`; the copy for that case must exist in both
+  // dialects, since it is the only thing that explains a dead button.
+  const zhDict = localeStub.registered?.dicts?.zh ?? {}
+  const enDict = localeStub.registered?.dicts?.en ?? {}
+  ok(typeof zhDict['note.needRestart'] === 'string' && zhDict['note.needRestart'].includes('重启'),
+    'the stale-host hint exists in Chinese and names a restart')
+  ok(typeof enDict['note.needRestart'] === 'string' && enDict['note.needRestart'].includes('Restart'),
+    'the stale-host hint exists in English')
+  const zhKeys = Object.keys(zhDict).sort()
+  const enKeys = Object.keys(enDict).sort()
+  ok(zhKeys.join() === enKeys.join(), 'zh and en dictionaries cover the same keys')
 }
 
 console.log(failures === 0 ? '\nall client checks passed' : `\n${failures} check(s) failed`)

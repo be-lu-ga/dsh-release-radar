@@ -7,6 +7,7 @@
  * Run: node host-test.mjs
  */
 import {
+  bulkQueue,
   classifySource,
   compareVersions,
   describeFailure,
@@ -106,6 +107,29 @@ check(
   describeFailure({ error: { code: 'operation-error', diagnostic: 'a\nb\nc\nd' } }) === 'b c d',
 )
 check('an empty result describes nothing', describeFailure({}) === '')
+
+console.log('bulkQueue')
+{
+  const live = [
+    { name: 'a', actionable: true, version: '2.0.0' },
+    { name: 'b', actionable: false, kind: 'git' },
+    { name: 'c', actionable: true, version: '3.0.0' },
+    { name: 'd' },
+    null,
+    'junk',
+  ]
+  const queue = bulkQueue(live)
+  check('keeps only actionable rows', queue.length === 2, `${queue.length}`)
+  check('preserves the listed order', queue.map((entry) => entry.name).join() === 'a,c')
+  check('skips entries that are not objects', queue.every((entry) => typeof entry.name === 'string'))
+  check(
+    'copies rows so a later sweep cannot retarget them',
+    queue[0] !== live[0] && queue[0].version === '2.0.0' && live[0].version === '2.0.0',
+  )
+  live[0].version = '9.9.9'
+  check('the snapshot keeps the version it was taken with', queue[0].version === '2.0.0')
+  check('a missing list yields an empty queue', bulkQueue(undefined).length === 0)
+}
 
 console.log('resolveProfileDir')
 const real = resolveProfileDir(process.env)

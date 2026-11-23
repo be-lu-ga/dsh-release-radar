@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Update notifier",
-    "description": "Sweeps the third-party plugins installed in this profile every 24 hours and floats a corner badge when newer releases exist. Open it to see how far each plugin lags and update one at a time; Git installs are marked for manual update. Nothing is installed until you confirm.",
+    "description": "Checks installed plugins for newer releases every 24 hours and keeps a badge in the bottom-right corner: it shows the count when something is out of date, and a green check mark when everything is current. Open the badge to see the version jump for each plugin, then update them one at a time or all at once. Nothing is installed until you confirm. Turn it off and the badge stops appearing and no release checks run.",
     "detail": "docs/DETAIL.md"
   }
 }
